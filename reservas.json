@@ -1,0 +1,20 @@
+[
+  {
+    "nombre": "Nicolas",
+    "documento": "1109668187",
+    "telefono": "3118521531",
+    "email": "nicocastro@gmail.com",
+    "cancha": "Sintética",
+    "fecha": "2025-10-14",
+    "hora": "20:00"
+  },
+  {
+    "nombre": "Julio Castro",
+    "documento": "6227976",
+    "telefono": "3117611963",
+    "email": "julito@gmail.com",
+    "cancha": "Sintética",
+    "fecha": "2025-10-16",
+    "hora": "14:00"
+  }
+]

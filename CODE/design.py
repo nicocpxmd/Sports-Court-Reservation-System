@@ -1,3 +1,4 @@
+import json
 import re
 import tkinter as tk
 from tkinter import ttk, messagebox, font
@@ -5,7 +6,7 @@ from tkcalendar import DateEntry
 from datetime import datetime, date
 
 # regex para nombre: letras (incluye acentos) y espacios
-NOMBRE_REGEX = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$")
+NOMBRE_REGEX = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ÿ'\- ]+$")
 
 # email regex que ya tienes
 EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
@@ -18,9 +19,11 @@ class DesignApp:
         self._create_header()
         self._create_form()
         self._create_buttons()
-
+    
         # Lugar para guardar reservas en memoria (simulado, para futuras integraciones)
         self._reservas_simuladas = []
+        # Cargar reservas previas desde archivo (si existe)
+        self._cargar_reservas_json()
 
     def _config_root(self):
         self.root.title("🥅 Sistema de Reservas de Canchas")
@@ -112,7 +115,7 @@ class DesignApp:
         sub = ttk.Frame(container, style="Card.TFrame")
         sub.pack(side="left", expand=True, fill="x")
         ttk.Label(sub, text="Fecha", style="FormLabel.TLabel").pack(anchor="w", pady=(0,2))
-        self.fecha_picker = DateEntry(sub, width=14, borderwidth=1, date_pattern='yyyy-mm-dd')
+        self.fecha_picker = DateEntry(sub, width=14, borderwidth=1, date_pattern='yyyy-mm-dd', mindate=date.today())
         self.fecha_picker.pack(fill="x")
 
         # Hora
@@ -251,6 +254,69 @@ class DesignApp:
         # Guardar en la lista simulada
         self._reservas_simuladas.append(reserva)
         messagebox.showinfo("Reserva exitosa", "¡Reserva realizada con éxito!")
+    
+        # Guardar reservas simuladas en un archivo JSON    
+        self._guardar_reservas_json()
+    
+        
+    def _guardar_reservas_json(self, path="reservas.json"):
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(self._reservas_simuladas, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print("No se pudo guardar reservas:", e)
+        
+    def _cargar_reservas_json(self, path="reservas.json"):
+        """
+        Carga reservas desde un archivo JSON si existe.
+        Valida que el contenido sea una lista de dicts con claves esperadas.
+        """
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            # No hay archivo: no hay reservas previas, continuar silenciosamente
+            return
+        except Exception as e:
+            # Error leyendo/parsing JSON: mostrar alerta pero no romper la app
+            print("Error cargando reservas:", e)
+            messagebox.showwarning("Aviso", f"No se pudo leer {path}. Se ignorarán reservas previas.")
+            return
+
+        # Validar estructura básica: lista de dicts con las claves mínimas
+        if not isinstance(data, list):
+            messagebox.showwarning("Aviso", f"Formato inválido en {path} (se esperaba una lista).")
+            return
+
+        valid_reservas = []
+        expected_keys = {"nombre", "documento", "telefono", "email", "cancha", "fecha", "hora"}
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            # comprobar que las claves esperadas están presentes (puedes relajar esto)
+            if not expected_keys.issubset(set(item.keys())):
+                # omitir registros incompletos
+                continue
+
+            # (opcional) validar formato de fecha/hora mínimo
+            try:
+                # validación ligera de fecha/hora; no lanza error si formato es correcto
+                datetime.strptime(item["fecha"], "%Y-%m-%d")
+                datetime.strptime(item["hora"], "%H:%M")
+            except Exception:
+                # si falla, omitir este registro
+                continue
+
+            valid_reservas.append(item)
+
+        # asignar las reservas válidas a la lista en memoria
+        if valid_reservas:
+            self._reservas_simuladas = valid_reservas
+            # notificar (opcional)
+            messagebox.showinfo("Reservas cargadas", f"Se cargaron {len(valid_reservas)} reserva(s) desde {path}.")
+        else:
+            # no se cargó ninguna reserva válida, mantener lista vacía
+            return
 
     def cancelar(self):
         messagebox.showinfo("Cancelar", "Reserva cancelada (simulado)")
