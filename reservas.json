@@ -1,12 +1,13 @@
 [
   {
-    "nombre": "SKFJKDJGKDJ",
-    "documento": "242424242",
-    "telefono": "2424242424",
-    "email": "KJSFKDJFKSJ@uao.edu.co",
+    "id": "e4d9319d-488d-49a5-bf75-f58d4dea1e48",
+    "nombre": "Julio",
+    "documento": "33535353",
+    "telefono": "243434356",
+    "email": "julio@gmail.com",
     "cancha": "Vóley",
-    "fecha": "2025-10-24",
-    "hora": "17:00",
+    "fecha": "2025-10-25",
+    "hora": "14:00",
     "precio": 7.5
   }
 ]
