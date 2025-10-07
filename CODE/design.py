@@ -22,9 +22,12 @@ from manager import Manager
 
 class DesignApp:
     def __init__(self, root):
+        # Root es la ventana principal de tkinter.
         self.root = root
+        # Manager encapsula la lógica de negocio y persistencia.
         self.manager = Manager()
 
+        # Configuración y construcción de la UI
         self._config_root()
         self._create_styles()
         self._create_header()
@@ -35,6 +38,7 @@ class DesignApp:
     # Setup UI
     # -------------------------
     def _config_root(self):
+        # Ajustes básicos de ventana (título, tamaño mínimo, colores).
         self.root.title("🥅 Sistema de Reservas de Canchas")
         self.root.geometry("760x460")
         self.root.minsize(640, 420)
@@ -43,10 +47,12 @@ class DesignApp:
         self.root.configure(bg=self.bg_color)
 
     def _create_styles(self):
+        # Configura estilos ttk y fuentes.
         style = ttk.Style(self.root)
         try:
             style.theme_use("clam")
         except Exception:
+            # Si no está disponible el theme, se ignora sin fallar.
             pass
 
         self.title_font = font.Font(family="Segoe UI", size=16, weight="bold")
@@ -60,28 +66,33 @@ class DesignApp:
         style.configure("Outline.TButton", background="#f3f3f3", foreground="#333333", padding=8)
 
     def _create_header(self):
+        # Cabecera con titulo principal
         header = ttk.Frame(self.root, style="Card.TFrame", padding=(20, 14))
         header.place(relx=0.5, rely=0.05, anchor="n", relwidth=0.92)
         ttk.Label(header, text="🥅 Sistema de Reservas de Canchas", style="Header.TLabel").pack(anchor="w")
 
     def _create_form(self):
+        # Panel principal con entradas de formulario
         card = ttk.Frame(self.root, style="Card.TFrame", padding=20)
         card.place(relx=0.5, rely=0.175, anchor="n", relwidth=0.92, relheight=0.70)
 
         left_col = ttk.Frame(card, style="Card.TFrame")
         left_col.pack(side="left", fill="both", expand=True, padx=(0,12))
 
+        # Helper para crear campo con etiqueta + entry
         def field(parent, label_text):
             ttk.Label(parent, text=label_text, style="FormLabel.TLabel").pack(anchor="w", pady=(6,2))
             ent = ttk.Entry(parent, font=self.label_font)
             ent.pack(fill="x")
             return ent
 
+        # Entradas básicas del cliente
         self.nombre_entry = field(left_col, "Nombre completo")
         self.documento_entry = field(left_col, "Documento")
         self.telefono_entry = field(left_col, "Teléfono")
         self.email_entry = field(left_col, "Correo electrónico")
 
+        # Combobox de tipos de cancha, poblado desde Manager
         ttk.Label(left_col, text="Cancha", style="FormLabel.TLabel").pack(anchor="w", pady=(10,2))
         types = self.manager.get_court_types()
         default_type = types[0] if types else ""
@@ -90,29 +101,34 @@ class DesignApp:
         self.cancha_combo["values"] = types
         self.cancha_combo.pack(fill="x")
 
-        # Container for Fecha / Hora / Precio
+        # Container para Fecha / Hora / Precio
         container = ttk.Frame(left_col, style="Card.TFrame")
         container.pack(fill="x", pady=(10,0))
 
+        # DateEntry (tkcalendar) con mindate = hoy
         ttk.Label(container, text="Fecha", style="FormLabel.TLabel").grid(row=0, column=0, sticky="w")
         self.fecha_picker = DateEntry(container, width=14, borderwidth=1, date_pattern='yyyy-mm-dd', mindate=date.today())
         self.fecha_picker.grid(row=1, column=0, padx=4, pady=(0,6), sticky="w")
 
+        # Combo de horas fijas (10:00 - 21:00)
         ttk.Label(container, text="Hora", style="FormLabel.TLabel").grid(row=0, column=1, sticky="w")
         self.hora_var = tk.StringVar()
         self.hora_combo = ttk.Combobox(container, textvariable=self.hora_var, state="readonly", width=8)
         self.hora_combo["values"] = [f"{h}:00" for h in range(10, 22)]
         self.hora_combo.grid(row=1, column=1, padx=4, pady=(0,6), sticky="w")
 
+        # Precio mostrado en entrada solo lectura
         ttk.Label(container, text="Precio (USD/hora)", style="FormLabel.TLabel").grid(row=0, column=2, sticky="w")
         self.price_var = tk.StringVar()
         self.price_entry = ttk.Entry(container, textvariable=self.price_var, font=self.label_font, state="readonly", justify="left", width=12)
         self.price_entry.grid(row=1, column=2, padx=4, pady=(0,6), sticky="w")
 
+        # Actualiza precio cuando se cambia la cancha seleccionada
         self.cancha_combo.bind("<<ComboboxSelected>>", lambda e: self._update_price())
         self._update_price()
 
     def _update_price(self):
+        # Llama a manager.get_price_for_court y formatea el precio; maneja excepciones.
         cancha = self.cancha_var.get()
         try:
             price = self.manager.get_price_for_court(cancha)
@@ -135,6 +151,7 @@ class DesignApp:
     # Main actions
     # -------------------------
     def _reservar(self):
+        # Recoge los valores del formulario
         nombre = self.nombre_entry.get().strip()
         documento = self.documento_entry.get().strip()
         telefono = self.telefono_entry.get().strip()
@@ -143,9 +160,11 @@ class DesignApp:
         fecha = self.fecha_picker.get()
         hora = self.hora_var.get()
 
+        # Validación mínima en UI: nombre, documento y hora son obligatorios
         if not nombre or not documento or not hora:
             return messagebox.showerror("Error", "Completa todos los campos obligatorios (nombre, documento, hora).")
 
+        # Delegar creación al Manager y mostrar errores si ocurren
         try:
             self.manager.create_reservation(
                 nombre=nombre,
@@ -162,13 +181,16 @@ class DesignApp:
             return messagebox.showerror("Error inesperado", str(e))
 
         messagebox.showinfo("Reserva exitosa", "¡Reserva realizada con éxito!")
+        # Limpia selección de hora para UX
         self.hora_var.set("")
 
     def ver_reservas(self):
+        # Obtiene lista de dicts desde Manager
         reservas = self.manager.get_all_reservations()
         if not reservas:
             return messagebox.showinfo("Reservas", "No hay reservas registradas.")
 
+        # Construye ventana con Treeview para listar reservas
         ventana = tk.Toplevel(self.root)
         ventana.title("Reservas registradas")
         ventana.geometry("800x400")
@@ -180,6 +202,7 @@ class DesignApp:
             tree.heading(col, text=col)
             tree.column(col, width=120, anchor="center")
 
+        # Inserta filas; el iid es el id de reserva para operar luego
         for r in reservas:
             res_id = r["id"]
             tree.insert("", "end", iid=res_id, values=(
@@ -188,6 +211,7 @@ class DesignApp:
 
         tree.pack(fill="both", expand=True, padx=10, pady=10)
 
+        # Funciones internas para editar y cancelar
         def editar():
             selected = tree.selection()
             if not selected:
@@ -219,6 +243,7 @@ class DesignApp:
         tk.Button(frame_botones, text="Cerrar", command=ventana.destroy, width=12).pack(side="left", padx=10)
 
     def _abrir_editor_reserva(self, reserva, res_id: str, tree: ttk.Treeview):
+        # Ventana para editar campos de la reserva
         edit_win = tk.Toplevel(self.root)
         edit_win.title("Editar reserva")
         edit_win.geometry("420x420")
@@ -231,6 +256,7 @@ class DesignApp:
             e.pack(fill="x", padx=10)
             return e
 
+        # Carga valores actuales en campos editables
         nombre_e = field("Nombre completo", reserva.client.nombre)
         tel_e = field("Teléfono", reserva.client.telefono)
         email_e = field("Correo electrónico", reserva.client.email)
@@ -248,13 +274,16 @@ class DesignApp:
         hora_cb.pack(fill="x", padx=10)
 
         ttk.Label(edit_win, text="Precio (USD/hora)").pack(anchor="w", pady=(6,0), padx=10)
+        # Precio mostrado en función de la cancha seleccionada (se obtiene desde Manager)
         edit_price_var = tk.StringVar(value=f"${self.manager.get_price_for_court(cancha_var.get()):.2f}")
         edit_price_entry = ttk.Entry(edit_win, textvariable=edit_price_var, state="readonly")
         edit_price_entry.pack(fill="x", padx=10)
 
+        # Actualiza precio en el editor si se cambia cancha
         cancha_cb.bind("<<ComboboxSelected>>", lambda e: edit_price_var.set(f"${self.manager.get_price_for_court(cancha_var.get()):.2f}"))
 
         def guardar_cambios():
+            # Recolecta nuevos valores y delega la edición al Manager.
             new_data = {
                 "nombre": nombre_e.get().strip(),
                 "telefono": tel_e.get().strip(),
@@ -267,6 +296,7 @@ class DesignApp:
             except Exception as e:
                 return messagebox.showerror("Error", str(e))
 
+            # Refresca la fila en el treeview con los nuevos valores
             updated = self.manager.get_reservation_by_id(res_id)
             if updated:
                 d = updated.to_dict()
@@ -280,6 +310,7 @@ class DesignApp:
         ttk.Button(edit_win, text="Guardar cambios", style="Accent.TButton", command=guardar_cambios).pack(pady=15)
 
     def _ver_disponibilidad(self):
+        # Consultas de disponibilidad simples: todo el día o una hora específica.
         cancha = self.cancha_var.get()
         fecha = self.fecha_picker.get()
         hora = self.hora_var.get()
@@ -288,10 +319,12 @@ class DesignApp:
             return messagebox.showwarning("Atención", "Selecciona cancha y fecha para consultar disponibilidad.")
 
         if not hora:
+            # Muestra todas las horas libres en el rango 10-21
             free = [f"{h}:00" for h in range(10, 22) if self.manager.check_availability(cancha, fecha, f"{h}:00")]
             msg = f"Horas libres para {cancha} el {fecha}:\n" + (", ".join(free) if free else "No hay horas libres.")
             return messagebox.showinfo("Disponibilidad", msg)
 
+        # Consulta puntual para una hora dada
         disponible = self.manager.check_availability(cancha, fecha, hora)
         msg = f"{cancha} {'está disponible' if disponible else 'NO está disponible'} el {fecha} a las {hora}."
         messagebox.showinfo("Disponibilidad", msg)

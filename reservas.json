@@ -11,14 +11,14 @@
     "precio": 7.5
   },
   {
-    "id": "a091daaa-be74-41ba-821c-2c1cd6a9944f",
-    "nombre": "Peppa Pig",
-    "documento": "3194325",
-    "telefono": "3457895609",
-    "email": "peppa.la.cerdita@usc.edu.co",
+    "id": "7880db59-9b20-4645-882c-f80d31e24d0b",
+    "nombre": "Carlos Alberto",
+    "documento": "23456789",
+    "telefono": "3004456789",
+    "email": "carlos@hotmail.com",
     "cancha": "Sintética",
-    "fecha": "2025-12-07",
-    "hora": "14:00",
+    "fecha": "2025-12-02",
+    "hora": "16:00",
     "precio": 5.0
   }
 ]
