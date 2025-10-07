@@ -1,16 +1,5 @@
 [
   {
-    "id": "e4d9319d-488d-49a5-bf75-f58d4dea1e48",
-    "nombre": "Julio",
-    "documento": "33535353",
-    "telefono": "243434356",
-    "email": "julio@gmail.com",
-    "cancha": "Vóley",
-    "fecha": "2025-10-25",
-    "hora": "17:00",
-    "precio": 7.5
-  },
-  {
     "id": "ca2d49ae-d98d-4921-9817-d654cb7cecbc",
     "nombre": "Juan",
     "documento": "22222222",
@@ -19,6 +8,17 @@
     "cancha": "Vóley",
     "fecha": "2025-10-31",
     "hora": "21:00",
+    "precio": 7.5
+  },
+  {
+    "id": "a091daaa-be74-41ba-821c-2c1cd6a9944f",
+    "nombre": "Peppa Pig",
+    "documento": "3194325",
+    "telefono": "3457895609",
+    "email": "peppa.la.cerdita@usc.edu.co",
+    "cancha": "Vóley",
+    "fecha": "2025-12-07",
+    "hora": "14:00",
     "precio": 7.5
   }
 ]
