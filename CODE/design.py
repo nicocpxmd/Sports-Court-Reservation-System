@@ -5,8 +5,8 @@ Interfaz gráfica del sistema de reservas.
 Se integra con Manager (API en inglés):
  - create_reservation(...)
  - get_all_reservations() -> list[dict]
- - edit_reservation(index, **kwargs)
- - cancel_reservation(index)
+ - edit_reservation_by_id(id, **kwargs)
+ - cancel_reservation_by_id(id)
  - get_price_for_court(tipo) -> float
  - get_court_types() -> list[str]
  - check_availability(cancha, fecha, hora) -> bool
@@ -109,7 +109,6 @@ class DesignApp:
         self.price_entry = ttk.Entry(container, textvariable=self.price_var, font=self.label_font, state="readonly", justify="left", width=12)
         self.price_entry.grid(row=1, column=2, padx=4, pady=(0,6), sticky="w")
 
-        # Bind para actualizar precio cuando cambie la cancha
         self.cancha_combo.bind("<<ComboboxSelected>>", lambda e: self._update_price())
         self._update_price()
 
@@ -133,7 +132,7 @@ class DesignApp:
         ttk.Button(bar, text="Disponibilidad", style="Outline.TButton", command=self._ver_disponibilidad).pack(side="left", padx=6)
 
     # -------------------------
-    # Main actions (delegate to Manager)
+    # Main actions
     # -------------------------
     def _reservar(self):
         nombre = self.nombre_entry.get().strip()
@@ -144,13 +143,8 @@ class DesignApp:
         fecha = self.fecha_picker.get()
         hora = self.hora_var.get()
 
-        # Validación mínima en GUI (Manager hará validaciones completas y persistencia)
-        if not nombre:
-            return messagebox.showerror("Error", "El nombre es obligatorio.")
-        if not documento:
-            return messagebox.showerror("Error", "El documento es obligatorio.")
-        if not hora:
-            return messagebox.showerror("Error", "Selecciona una hora.")
+        if not nombre or not documento or not hora:
+            return messagebox.showerror("Error", "Completa todos los campos obligatorios (nombre, documento, hora).")
 
         try:
             self.manager.create_reservation(
@@ -168,16 +162,12 @@ class DesignApp:
             return messagebox.showerror("Error inesperado", str(e))
 
         messagebox.showinfo("Reserva exitosa", "¡Reserva realizada con éxito!")
-        # limpiar hora tras reservar
         self.hora_var.set("")
 
     def ver_reservas(self):
-        """Muestra todas las reservas en una nueva ventana con opciones de editar y cancelar."""
         reservas = self.manager.get_all_reservations()
-
         if not reservas:
-            messagebox.showinfo("Reservas", "No hay reservas registradas.")
-            return
+            return messagebox.showinfo("Reservas", "No hay reservas registradas.")
 
         ventana = tk.Toplevel(self.root)
         ventana.title("Reservas registradas")
@@ -190,49 +180,31 @@ class DesignApp:
             tree.heading(col, text=col)
             tree.column(col, width=120, anchor="center")
 
-        # Insertar cada reserva con su ID único como iid
         for r in reservas:
             res_id = r["id"]
-            tree.insert(
-                "",
-                "end",
-                iid=res_id,
-                values=(
-                    r["nombre"],
-                    r["email"],
-                    r["fecha"],
-                    r["hora"],
-                    r["cancha"],
-                    f"${r['precio']:.2f}",
-                ),
-            )
+            tree.insert("", "end", iid=res_id, values=(
+                r["nombre"], r["email"], r["fecha"], r["hora"], r["cancha"], f"${r['precio']:.2f}"
+            ))
 
         tree.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # --- Función para editar reserva seleccionada ---
         def editar():
             selected = tree.selection()
             if not selected:
                 return messagebox.showwarning("Atención", "Selecciona una reserva para editar.")
-
             res_id = selected[0]
             reserva = self.manager.get_reservation_by_id(res_id)
             if not reserva:
                 return messagebox.showerror("Error", "La reserva seleccionada ya no existe.")
-
             self._abrir_editor_reserva(reserva, res_id, tree)
 
-        # --- Función para cancelar reserva seleccionada ---
         def cancelar():
             selected = tree.selection()
             if not selected:
                 return messagebox.showwarning("Atención", "Selecciona una reserva para cancelar.")
-
             res_id = selected[0]
-            confirm = messagebox.askyesno("Confirmar", "¿Deseas cancelar esta reserva?")
-            if not confirm:
+            if not messagebox.askyesno("Confirmar", "¿Deseas cancelar esta reserva?"):
                 return
-
             try:
                 self.manager.cancel_reservation_by_id(res_id)
                 tree.delete(res_id)
@@ -240,25 +212,13 @@ class DesignApp:
             except Exception as e:
                 messagebox.showerror("Error", str(e))
 
-        # --- Botones de acción ---
         frame_botones = tk.Frame(ventana)
         frame_botones.pack(pady=10)
+        tk.Button(frame_botones, text="Editar", command=editar, width=12, bg="#007bff", fg="white").pack(side="left", padx=10)
+        tk.Button(frame_botones, text="Cancelar", command=cancelar, width=12, bg="#dc3545", fg="white").pack(side="left", padx=10)
+        tk.Button(frame_botones, text="Cerrar", command=ventana.destroy, width=12).pack(side="left", padx=10)
 
-        btn_editar = tk.Button(frame_botones, text="Editar", command=editar, width=12, bg="#007bff", fg="white")
-        btn_editar.pack(side="left", padx=10)
-
-        btn_cancelar = tk.Button(frame_botones, text="Cancelar", command=cancelar, width=12, bg="#dc3545", fg="white")
-        btn_cancelar.pack(side="left", padx=10)
-
-        btn_cerrar = tk.Button(frame_botones, text="Cerrar", command=ventana.destroy, width=12)
-        btn_cerrar.pack(side="left", padx=10)
-
-
-    def _abrir_editor_reserva(self, reserva: dict, idx: int, tree: ttk.Treeview):
-        """
-        Abre ventana para editar la reserva.
-        Al guardar, delega en manager.edit_reservation(index, **kwargs).
-        """
+    def _abrir_editor_reserva(self, reserva, res_id: str, tree: ttk.Treeview):
         edit_win = tk.Toplevel(self.root)
         edit_win.title("Editar reserva")
         edit_win.geometry("420x420")
@@ -271,33 +231,28 @@ class DesignApp:
             e.pack(fill="x", padx=10)
             return e
 
-        nombre_e = field("Nombre completo", reserva.get("nombre", ""))
-        tel_e = field("Teléfono", reserva.get("telefono", ""))
-        email_e = field("Correo electrónico", reserva.get("email", ""))
+        nombre_e = field("Nombre completo", reserva.client.nombre)
+        tel_e = field("Teléfono", reserva.client.telefono)
+        email_e = field("Correo electrónico", reserva.client.email)
 
         ttk.Label(edit_win, text="Cancha").pack(anchor="w", pady=(6,0), padx=10)
-        cancha_var = tk.StringVar(value=reserva.get("cancha", ""))
+        cancha_var = tk.StringVar(value=reserva.court.tipo)
         cancha_cb = ttk.Combobox(edit_win, textvariable=cancha_var, state="readonly")
         cancha_cb["values"] = self.manager.get_court_types()
         cancha_cb.pack(fill="x", padx=10)
 
         ttk.Label(edit_win, text="Hora").pack(anchor="w", pady=(6,0), padx=10)
-        hora_var = tk.StringVar(value=reserva.get("hora", ""))
+        hora_var = tk.StringVar(value=reserva.hora)
         hora_cb = ttk.Combobox(edit_win, textvariable=hora_var, state="readonly")
         hora_cb["values"] = [f"{h}:00" for h in range(10, 22)]
         hora_cb.pack(fill="x", padx=10)
 
         ttk.Label(edit_win, text="Precio (USD/hora)").pack(anchor="w", pady=(6,0), padx=10)
-        initial_price = self.manager.get_price_for_court(cancha_var.get())
-        edit_price_var = tk.StringVar(value=f"${initial_price:.2f}")
+        edit_price_var = tk.StringVar(value=f"${self.manager.get_price_for_court(cancha_var.get()):.2f}")
         edit_price_entry = ttk.Entry(edit_win, textvariable=edit_price_var, state="readonly")
         edit_price_entry.pack(fill="x", padx=10)
 
-        def _editor_update_price(event=None):
-            p = self.manager.get_price_for_court(cancha_var.get())
-            edit_price_var.set(f"${p:.2f}")
-
-        cancha_cb.bind("<<ComboboxSelected>>", _editor_update_price)
+        cancha_cb.bind("<<ComboboxSelected>>", lambda e: edit_price_var.set(f"${self.manager.get_price_for_court(cancha_var.get()):.2f}"))
 
         def guardar_cambios():
             new_data = {
@@ -308,27 +263,16 @@ class DesignApp:
                 "hora": hora_var.get()
             }
             try:
-                # Manager se encarga de validar y persistir
-                self.manager.edit_reservation(idx, **new_data)
-            except (IndexError, ValueError) as e:
-                return messagebox.showerror("Error", str(e))
+                self.manager.edit_reservation_by_id(res_id, **new_data)
             except Exception as e:
-                return messagebox.showerror("Error inesperado", str(e))
+                return messagebox.showerror("Error", str(e))
 
-            # obtener reserva actualizada y refrescar fila en el treeview
-            try:
-                updated = self.manager.get_all_reservations()[idx]
-                tree.item(str(idx+1), values=(
-                    idx+1,
-                    updated.get("nombre", ""),
-                    updated.get("email", ""),
-                    updated.get("fecha", ""),
-                    updated.get("hora", ""),
-                    updated.get("cancha", ""),
-                    f"${updated.get('precio', 0.0):.2f}"
+            updated = self.manager.get_reservation_by_id(res_id)
+            if updated:
+                d = updated.to_dict()
+                tree.item(res_id, values=(
+                    d["nombre"], d["email"], d["fecha"], d["hora"], d["cancha"], f"${d['precio']:.2f}"
                 ))
-            except Exception:
-                pass
 
             edit_win.destroy()
             messagebox.showinfo("Actualizada", "Reserva actualizada correctamente.")
@@ -344,18 +288,10 @@ class DesignApp:
             return messagebox.showwarning("Atención", "Selecciona cancha y fecha para consultar disponibilidad.")
 
         if not hora:
-            # Mostrar todas las horas libres
             free = [f"{h}:00" for h in range(10, 22) if self.manager.check_availability(cancha, fecha, f"{h}:00")]
-            if free:
-                messagebox.showinfo("Disponibilidad", f"Horas libres para {cancha} el {fecha}:\n" + ", ".join(free))
-            else:
-                messagebox.showinfo("Disponibilidad", f"No hay horas libres para {cancha} el {fecha}.")
-            return
+            msg = f"Horas libres para {cancha} el {fecha}:\n" + (", ".join(free) if free else "No hay horas libres.")
+            return messagebox.showinfo("Disponibilidad", msg)
 
-        # Si seleccionó hora específica
         disponible = self.manager.check_availability(cancha, fecha, hora)
-        if disponible:
-            messagebox.showinfo("Disponibilidad", f"{cancha} está disponible el {fecha} a las {hora}.")
-        else:
-            messagebox.showinfo("Disponibilidad", f"{cancha} NO está disponible el {fecha} a las {hora}.")
-
+        msg = f"{cancha} {'está disponible' if disponible else 'NO está disponible'} el {fecha} a las {hora}."
+        messagebox.showinfo("Disponibilidad", msg)
