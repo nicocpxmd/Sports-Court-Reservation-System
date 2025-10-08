@@ -1,3 +1,8 @@
+# Juan David Ocampo Gutierrez
+# Nicolás Castro Pacheco
+# Michell Valencia Berdugo
+# Juan David Rivera Durán
+
 """
 court.py
 ---------

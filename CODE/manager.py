@@ -1,3 +1,9 @@
+# Juan David Ocampo Gutierrez
+# Nicolás Castro Pacheco
+# Michell Valencia Berdugo
+# Juan David Rivera Durán
+
+
 from datetime import datetime, date
 from typing import List, Dict, Optional
 from client import Client
